@@ -71,15 +71,20 @@ tab_chat, tab_pdf, tab_img_analysis = st.tabs([
 
 # --- 1. Sohbet Asistanı Sekmesi ---
 with tab_chat:
-    # Mesaj giriş kutusunu altta tutmak için container kullanıyoruz
-    chat_container = st.container()
-    
+    # Chat alanını yapılandırma
+    if "messages" not in st.session_state:
+        st.session_state.messages = [
+            {"role": "model", "text": "Merhaba! 👋 Nasıl yardımcı olabilirim?"}
+        ]
+
     # Sidebar'a sohbet ayarları ve bilgi ekle
     with st.sidebar:
         st.markdown("### 🛠️ Sohbet Ayarları")
         
         if st.button("🔄 Yeni Sohbet Başlat", use_container_width=True):
-            st.session_state.chat_history = []
+            st.session_state.messages = [
+                {"role": "model", "text": "Merhaba! 👋 Nasıl yardımcı olabilirim?"}
+            ]
             st.rerun()
         
         st.markdown("---")
@@ -149,63 +154,104 @@ with tab_chat:
             border-radius: 0.3rem;
             font-size: 0.9em;
         }
-        </style>
-    """, unsafe_allow_html=True)
-
-    # Sohbet geçmişini Streamlit session state'de saklama
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
-        # Hoş geldin mesajı
-        welcome_msg = {
-            "role": "model",
-            "text": "Merhaba! 👋 Nasıl yardımcı olabilirim?"
-        }
-        st.session_state.chat_history.append(welcome_msg)
-
-    # Ana sohbet alanı
-    with chat_container:
-        # Mesaj geçmişi için scrollable alan
-        with st.container():
-            for message in st.session_state.chat_history:
-                avatar = "🧑‍💻" if message["role"] == "user" else "🤖"
-                with st.chat_message(message["role"], avatar=avatar):
-                    st.markdown(message["text"])
         
-        # En son mesaja otomatik kaydırma için JavaScript
-        st.markdown("""
-            <script>
-                var elements = window.parent.document.querySelectorAll('.stChatMessage');
-                if (elements.length > 0) {
-                    elements[elements.length - 1].scrollIntoView();
-                }
-            </script>
-            """, unsafe_allow_html=True)
-    
-    # Mesaj giriş kutusunu en alta sabitleme
-    st.markdown(
-        """
-        <style>
-        .stChatInputContainer {
+        /* Sohbet alanı düzeni */
+        .main .block-container {
+            padding-bottom: 100px;
+        }
+        .stChatInput {
             position: fixed;
             bottom: 0;
             left: 0;
             right: 0;
-            padding: 1rem;
             background: white;
-            z-index: 100;
-            border-top: 1px solid rgba(128, 128, 128, 0.1);
+            padding: 20px;
+            z-index: 1000;
         }
-        /* Ana içerik için padding ekliyoruz ki mesaj kutusu içeriği kapatmasın */
-        .main > div {
-            padding-bottom: 100px;
+        div[data-testid="stChatInput"] {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            padding: 20px;
+            z-index: 1000;
         }
         </style>
-        """, 
-        unsafe_allow_html=True
-    )
+    """, unsafe_allow_html=True)
+
+    # Mesajları göster
+    messages_container = st.container()
     
-    # Kullanıcı girişi - artık her zaman altta kalacak
+    with messages_container:
+        for message in st.session_state.messages:
+            avatar = "🧑‍💻" if message["role"] == "user" else "🤖"
+            with st.chat_message(message["role"], avatar=avatar):
+                st.markdown(message["text"])
+
+    # Kullanıcı girişi
     if prompt := st.chat_input("Mesajınızı buraya yazın..."):
+        # Kullanıcı mesajını ekle
+        st.session_state.messages.append({"role": "user", "text": prompt})
+
+        # Model yanıtı
+        with st.chat_message("model", avatar="🤖"):
+            full_response = ""
+            message_placeholder = st.empty()
+            
+            try:
+                # Sohbet geçmişini hazırla
+                gemini_contents = []
+                for msg in st.session_state.messages[:-1]:  # Son mesaj hariç
+                    gemini_contents.append(types.Content(
+                        role=msg["role"],
+                        parts=[types.Part(text=msg["text"])]
+                    ))
+                
+                # Son kullanıcı mesajını ekle
+                gemini_contents.append(types.Content(
+                    role="user",
+                    parts=[types.Part(text=prompt)]
+                ))
+                
+                # Model yanıtı al (streaming)
+                response_stream = client.models.generate_content_stream(
+                    model="gemini-2.5-flash",
+                    contents=gemini_contents
+                )
+                
+                # Yanıtı parça parça göster
+                for chunk in response_stream:
+                    full_response += chunk.text
+                    message_placeholder.markdown(full_response + "▌")
+                
+                # Son yanıtı göster ve geçmişe ekle
+                message_placeholder.markdown(full_response)
+                st.session_state.messages.append({"role": "model", "text": full_response})
+                
+                # Sayfayı yenile - yeni mesajların görünmesi için
+                st.rerun()
+                
+            except APIError as e:
+                error_msg = f"🚨 API Hatası: {str(e)}"
+                message_placeholder.error(error_msg)
+                st.session_state.messages.append({"role": "model", "text": f"*{error_msg}*"})
+            except Exception as e:
+                error_msg = f"⚠️ Beklenmedik bir hata oluştu: {type(e).__name__} - {str(e)}"
+                message_placeholder.error(error_msg)
+                st.session_state.messages.append({"role": "model", "text": f"*{error_msg}*"})
+            # Kullanıcı mesajını ekle
+            st.session_state.chat_history.append({"role": "user", "text": prompt})
+            
+            # Geçmişi güncelleyip göster
+            with chat_placeholder:
+                for message in st.session_state.chat_history:
+                    avatar = "🧑‍💻" if message["role"] == "user" else "🤖"
+                    with st.chat_message(message["role"], avatar=avatar):
+                        st.markdown(message["text"])
+            
+            # Model yanıtı
+            with st.chat_message("model", avatar="🤖"):
         
         # Kullanıcı mesajını geçmişe ekleme ve gösterme
         st.session_state.chat_history.append({"role": "user", "text": prompt})
