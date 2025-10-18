@@ -71,6 +71,9 @@ tab_chat, tab_pdf, tab_img_analysis = st.tabs([
 
 # --- 1. Sohbet Asistanı Sekmesi ---
 with tab_chat:
+    # Mesaj giriş kutusunu altta tutmak için container kullanıyoruz
+    chat_container = st.container()
+    
     # Sidebar'a sohbet ayarları ve bilgi ekle
     with st.sidebar:
         st.markdown("### 🛠️ Sohbet Ayarları")
@@ -155,24 +158,53 @@ with tab_chat:
         # Hoş geldin mesajı
         welcome_msg = {
             "role": "model",
-            "text": """Merhaba! 👋 Ben SeyidAI, sizinle sohbet etmekten mutluluk duyacağım.
-
-Birlikte neler yapabiliriz:
-• 💭 Her konuda sohbet edebiliriz
-• 📚 PDF belgelerinizi analiz edebilirim
-• 🖼️ Fotoğraflarınızı yorumlayabilirim
-
-Nasıl başlamak istersiniz? Belirli bir konuda yardım mı lazım, yoksa sohbet mi edelim? 😊"""
+            "text": "Merhaba! 👋 Nasıl yardımcı olabilirim?"
         }
         st.session_state.chat_history.append(welcome_msg)
 
-    # Sohbet geçmişini görüntüleme
-    for message in st.session_state.chat_history:
-        avatar = "🧑‍💻" if message["role"] == "user" else "🤖"
-        with st.chat_message(message["role"], avatar=avatar):
-            st.markdown(message["text"])
-
-    # Kullanıcı girişi
+    # Ana sohbet alanı
+    with chat_container:
+        # Mesaj geçmişi için scrollable alan
+        with st.container():
+            for message in st.session_state.chat_history:
+                avatar = "🧑‍💻" if message["role"] == "user" else "🤖"
+                with st.chat_message(message["role"], avatar=avatar):
+                    st.markdown(message["text"])
+        
+        # En son mesaja otomatik kaydırma için JavaScript
+        st.markdown("""
+            <script>
+                var elements = window.parent.document.querySelectorAll('.stChatMessage');
+                if (elements.length > 0) {
+                    elements[elements.length - 1].scrollIntoView();
+                }
+            </script>
+            """, unsafe_allow_html=True)
+    
+    # Mesaj giriş kutusunu en alta sabitleme
+    st.markdown(
+        """
+        <style>
+        .stChatInputContainer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 1rem;
+            background: white;
+            z-index: 100;
+            border-top: 1px solid rgba(128, 128, 128, 0.1);
+        }
+        /* Ana içerik için padding ekliyoruz ki mesaj kutusu içeriği kapatmasın */
+        .main > div {
+            padding-bottom: 100px;
+        }
+        </style>
+        """, 
+        unsafe_allow_html=True
+    )
+    
+    # Kullanıcı girişi - artık her zaman altta kalacak
     if prompt := st.chat_input("Mesajınızı buraya yazın..."):
         
         # Kullanıcı mesajını geçmişe ekleme ve gösterme
@@ -205,6 +237,20 @@ Nasıl başlamak istersiniz? Belirli bir konuda yardım mı lazım, yoksa sohbet
                 ))
 
 
+                # Modelimize doğal yanıt verme talimatı
+                system_prompt = """Sen yardımcı bir asistansın. Yanıtların:
+                - Doğal ve samimi olmalı
+                - Kısa ve öz olmalı
+                - Gereksiz tekrarlardan kaçınmalı
+                - "Ben bir AI'yım" gibi ifadeler kullanmamalı
+                Kullanıcıyla normal bir sohbet gibi ilerle."""
+
+                # İçeriğe system prompt'u ekle
+                gemini_contents.insert(0, types.Content(
+                    role="model",
+                    parts=[types.Part(text=system_prompt)]
+                ))
+
                 # generate_content_stream kullanılarak akışlı yanıt alınıyor
                 response_stream = client.models.generate_content_stream(
                     model="gemini-2.5-flash",
@@ -217,7 +263,8 @@ Nasıl başlamak istersiniz? Belirli bir konuda yardım mı lazım, yoksa sohbet
                     full_response += chunk.text
                     message_placeholder.markdown(f"{full_response}{typing_char}")
                 
-                # Final yanıt
+                # Final yanıt - gereksiz boşlukları temizle
+                full_response = full_response.strip()
                 message_placeholder.markdown(full_response)
                 
                 # Tam yanıtı geçmişe ekleme
