@@ -71,27 +71,80 @@ tab_chat, tab_pdf, tab_img_analysis = st.tabs([
 
 # --- 1. Sohbet Asistanı Sekmesi ---
 with tab_chat:
-    # Sidebar'a sohbeti sıfırlama butonu ekle
+    # Sidebar'a sohbet ayarları ve bilgi ekle
     with st.sidebar:
-        st.markdown("### Sohbet Ayarları")
-        if st.button("🔄 Sohbeti Sıfırla"):
+        st.markdown("### 🛠️ Sohbet Ayarları")
+        
+        if st.button("🔄 Yeni Sohbet Başlat", use_container_width=True):
             st.session_state.chat_history = []
             st.rerun()
+        
+        st.markdown("---")
+        st.markdown("""
+        ### 💡 İpuçları
+        - Uzun mesajlar için Enter tuşunu kullanın
+        - Kod paylaşırken \\` işaretleri kullanın
+        - Karmaşık sorular için detay verin
+        """)
+        
+        st.markdown("---")
+        st.markdown("### 🎯 Özellikler")
+        st.markdown("""
+        • 💭 Genel sohbet & yardım
+        • 📚 PDF analizi
+        • 🖼️ Görsel yorumlama
+        """)
 
     # Modern chat template stili
     st.markdown("""
         <style>
+        /* Chat container stilleri */
         .stChatMessage {
-            padding: 1rem;
-            border-radius: 0.5rem;
-            margin-bottom: 1rem;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            margin-bottom: 1.5rem;
             border: 1px solid rgba(128, 128, 128, 0.1);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            max-width: 85%;
+            transition: all 0.3s ease;
         }
+        
+        /* Kullanıcı mesajları */
         .stChatMessage.user {
-            background-color: #f0f2f6;
+            background: linear-gradient(135deg, #6B46C1 0%, #4F46E5 100%);
+            color: white !important;
+            margin-left: auto;
+            border-bottom-right-radius: 0.2rem;
         }
+        .stChatMessage.user p {
+            color: white !important;
+        }
+        
+        /* Asistan mesajları */
         .stChatMessage.assistant {
-            background-color: #ffffff;
+            background: white;
+            margin-right: auto;
+            border-bottom-left-radius: 0.2rem;
+        }
+        
+        /* Emoji avatar stilleri */
+        .stChatMessage .avatar {
+            font-size: 1.2rem;
+            margin-right: 0.5rem;
+        }
+        
+        /* Markdown içerik stilleri */
+        .stChatMessage p {
+            margin: 0;
+            line-height: 1.6;
+        }
+        
+        /* Kod blokları için özel stil */
+        .stChatMessage code {
+            background: rgba(0,0,0,0.05);
+            padding: 0.2em 0.4em;
+            border-radius: 0.3rem;
+            font-size: 0.9em;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -102,7 +155,14 @@ with tab_chat:
         # Hoş geldin mesajı
         welcome_msg = {
             "role": "model",
-            "text": "Merhaba! 👋 Ben SeyidAI, size nasıl yardımcı olabilirim? Sohbet edebilir, belge analizi yapabilir veya görselleri yorumlayabilirim."
+            "text": """Merhaba! 👋 Ben SeyidAI, sizinle sohbet etmekten mutluluk duyacağım.
+
+Birlikte neler yapabiliriz:
+• 💭 Her konuda sohbet edebiliriz
+• 📚 PDF belgelerinizi analiz edebilirim
+• 🖼️ Fotoğraflarınızı yorumlayabilirim
+
+Nasıl başlamak istersiniz? Belirli bir konuda yardım mı lazım, yoksa sohbet mi edelim? 😊"""
         }
         st.session_state.chat_history.append(welcome_msg)
 
