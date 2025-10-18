@@ -240,61 +240,27 @@ with tab_chat:
                 error_msg = f"⚠️ Beklenmedik bir hata oluştu: {type(e).__name__} - {str(e)}"
                 message_placeholder.error(error_msg)
                 st.session_state.messages.append({"role": "model", "text": f"*{error_msg}*"})
-            # Kullanıcı mesajını ekle
-            st.session_state.chat_history.append({"role": "user", "text": prompt})
-            
-            # Geçmişi güncelleyip göster
-            with chat_placeholder:
-                for message in st.session_state.chat_history:
-                    avatar = "🧑‍💻" if message["role"] == "user" else "🤖"
-                    with st.chat_message(message["role"], avatar=avatar):
-                        st.markdown(message["text"])
-            
-            # Model yanıtı
-            with st.chat_message("model", avatar="🤖"):
-        
-        # Kullanıcı mesajını geçmişe ekleme ve gösterme
-        st.session_state.chat_history.append({"role": "user", "text": prompt})
-        with st.chat_message("user", avatar="🧑‍💻"):
-            st.markdown(prompt)
-
-        # Modelden yanıt alma (streaming)
-        with st.chat_message("model", avatar="🤖"):
+            # Modelden yanıt alma (streaming)
             full_response = ""
             message_placeholder = st.empty()
             
             try:
-                # Düzeltilmiş sohbet geçmişi dönüşümü
+                # Sohbet geçmişi dönüşümü
                 gemini_contents = []
-                for msg in st.session_state.chat_history:
+                for msg in st.session_state.messages:
                     # Son kullanıcı mesajını hariç tut (ayrıca eklenecek)
-                    if msg == st.session_state.chat_history[-1] and msg["role"] == "user":
+                    if msg == st.session_state.messages[-1] and msg["role"] == "user":
                         break
                     
                     gemini_contents.append(types.Content(
                         role=msg["role"], 
-                        parts=[types.Part(text=msg["text"]) ]
+                        parts=[types.Part(text=msg["text"])]
                     ))
 
-                # Son kullanıcı mesajını (prompt) ekliyoruz
+                # Son kullanıcı mesajını ekle
                 gemini_contents.append(types.Content(
                     role="user", 
                     parts=[types.Part(text=prompt)]
-                ))
-
-
-                # Modelimize doğal yanıt verme talimatı
-                system_prompt = """Sen yardımcı bir asistansın. Yanıtların:
-                - Doğal ve samimi olmalı
-                - Kısa ve öz olmalı
-                - Gereksiz tekrarlardan kaçınmalı
-                - "Ben bir AI'yım" gibi ifadeler kullanmamalı
-                Kullanıcıyla normal bir sohbet gibi ilerle."""
-
-                # İçeriğe system prompt'u ekle
-                gemini_contents.insert(0, types.Content(
-                    role="model",
-                    parts=[types.Part(text=system_prompt)]
                 ))
 
                 # generate_content_stream kullanılarak akışlı yanıt alınıyor
@@ -303,27 +269,23 @@ with tab_chat:
                     contents=gemini_contents
                 )
                 
-                # Streaming yanıt
-                typing_char = "▌"
+                # Streaming yanıt gösterimi
                 for chunk in response_stream:
                     full_response += chunk.text
-                    message_placeholder.markdown(f"{full_response}{typing_char}")
+                    message_placeholder.markdown(full_response + "▌")
                 
-                # Final yanıt - gereksiz boşlukları temizle
-                full_response = full_response.strip()
+                # Final yanıtı göster ve geçmişe ekle
                 message_placeholder.markdown(full_response)
-                
-                # Tam yanıtı geçmişe ekleme
-                st.session_state.chat_history.append({"role": "model", "text": full_response})
+                st.session_state.messages.append({"role": "model", "text": full_response})
 
             except APIError as e:
                 error_msg = f"🚨 API Hatası: {str(e)}"
                 message_placeholder.error(error_msg)
-                st.session_state.chat_history.append({"role": "model", "text": f"*{error_msg}*"})
+                st.session_state.messages.append({"role": "model", "text": f"*{error_msg}*"})
             except Exception as e:
                 error_msg = f"⚠️ Beklenmedik bir hata oluştu: {type(e).__name__} - {str(e)}"
                 message_placeholder.error(error_msg)
-                st.session_state.chat_history.append({"role": "model", "text": f"*{error_msg}*"})
+                st.session_state.messages.append({"role": "model", "text": f"*{error_msg}*"})
 
 # --- 2. PDF Analizi Sekmesi ---
 with tab_pdf:
