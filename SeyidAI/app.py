@@ -18,7 +18,7 @@ except ImportError:
 
 # API Anahtarını ortam değişkeninden okuma
 # KRİTİK DÜZELTME: API Anahtarını doğrudan koda yazmak yerine ortam değişkeninden alıyoruz.
-api_key = os.environ.get("GEMINI_API_KEY")
+api_key = os.environ.get("MODEL_API_KEY")
 
 if not api_key:
     # Anahtar bulunamazsa kullanıcıya uyarı verme ve uygulamayı durdurma
@@ -363,5 +363,6 @@ with tab_img_analysis:
 # --- Alt Bilgi ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("Geliştirici: Seyid Yıldız")
+
 
 
