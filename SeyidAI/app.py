@@ -221,5 +221,6 @@ with tab_img_analysis:
 
 # --- Alt Bilgi ---
 st.sidebar.markdown("---")
-st.sidebar.markdown("Geliştirici: SeyidAI")
+st.sidebar.markdown("Geliştirici: Seyid Yıldız")
+
 
