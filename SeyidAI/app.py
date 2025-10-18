@@ -221,5 +221,5 @@ with tab_img_analysis:
 
 # --- Alt Bilgi ---
 st.sidebar.markdown("---")
-st.sidebar.markdown("Bu uygulama Gemini ve Imagen API'lerini kullanır.")
 st.sidebar.markdown("Geliştirici: SeyidAI")
+
