@@ -77,17 +77,8 @@ with tab_chat:
             {"role": "model", "text": "Merhaba! 👋 Nasıl yardımcı olabilirim?"}
         ]
 
-    # Sidebar'a sohbet ayarları ve bilgi ekle
+    # Sidebar'a bilgi ekle
     with st.sidebar:
-        st.markdown("### 🛠️ Sohbet Ayarları")
-        
-        if st.button("🔄 Yeni Sohbet Başlat", use_container_width=True):
-            st.session_state.messages = [
-                {"role": "model", "text": "Merhaba! 👋 Nasıl yardımcı olabilirim?"}
-            ]
-            st.rerun()
-        
-        st.markdown("---")
         st.markdown("""
         ### 💡 İpuçları
         - Uzun mesajlar için Enter tuşunu kullanın
