@@ -71,37 +71,66 @@ tab_chat, tab_pdf, tab_img_analysis = st.tabs([
 
 # --- 1. Sohbet Asistanı Sekmesi ---
 with tab_chat:
-    st.subheader("Sohbet Asistanı")
+    # Sidebar'a sohbeti sıfırlama butonu ekle
+    with st.sidebar:
+        st.markdown("### Sohbet Ayarları")
+        if st.button("🔄 Sohbeti Sıfırla"):
+            st.session_state.chat_history = []
+            st.rerun()
+
+    # Modern chat template stili
+    st.markdown("""
+        <style>
+        .stChatMessage {
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(128, 128, 128, 0.1);
+        }
+        .stChatMessage.user {
+            background-color: #f0f2f6;
+        }
+        .stChatMessage.assistant {
+            background-color: #ffffff;
+        }
+        </style>
+    """, unsafe_allow_html=True)
 
     # Sohbet geçmişini Streamlit session state'de saklama
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
+        # Hoş geldin mesajı
+        welcome_msg = {
+            "role": "model",
+            "text": "Merhaba! 👋 Ben SeyidAI, size nasıl yardımcı olabilirim? Sohbet edebilir, belge analizi yapabilir veya görselleri yorumlayabilirim."
+        }
+        st.session_state.chat_history.append(welcome_msg)
 
     # Sohbet geçmişini görüntüleme
     for message in st.session_state.chat_history:
-        role = "Asistan" if message["role"] == "model" else "Siz"
-        st.chat_message(message["role"]).markdown(f"**{role}:** {message['text']}")
+        avatar = "🧑‍💻" if message["role"] == "user" else "🤖"
+        with st.chat_message(message["role"], avatar=avatar):
+            st.markdown(message["text"])
 
     # Kullanıcı girişi
-    if prompt := st.chat_input("Buraya yazın..."):
+    if prompt := st.chat_input("Mesajınızı buraya yazın..."):
         
         # Kullanıcı mesajını geçmişe ekleme ve gösterme
         st.session_state.chat_history.append({"role": "user", "text": prompt})
-        st.chat_message("user").markdown(f"**Siz:** {prompt}")
+        with st.chat_message("user", avatar="🧑‍💻"):
+            st.markdown(prompt)
 
         # Modelden yanıt alma (streaming)
-        with st.chat_message("model"):
+        with st.chat_message("model", avatar="🤖"):
             full_response = ""
             message_placeholder = st.empty()
             
             try:
-                # DÜZELTME: Sohbet geçmişini Gemini formatına çevirip yeni bir oturum başlatıyoruz.
-                # Bu, "client has been closed" hatasını önler.
+                # Düzeltilmiş sohbet geçmişi dönüşümü
                 gemini_contents = []
                 for msg in st.session_state.chat_history:
-                    # Modelden gelen son mesajı (şu anda yanıtlanacak olan) hariç tutuyoruz.
+                    # Son kullanıcı mesajını hariç tut (ayrıca eklenecek)
                     if msg == st.session_state.chat_history[-1] and msg["role"] == "user":
-                        # Yeni prompt'u eklemeden hemen önceki tüm geçmişi ekliyoruz.
                         break
                     
                     gemini_contents.append(types.Content(
@@ -122,20 +151,26 @@ with tab_chat:
                     contents=gemini_contents
                 )
                 
+                # Streaming yanıt
+                typing_char = "▌"
                 for chunk in response_stream:
                     full_response += chunk.text
-                    message_placeholder.markdown(f"**Asistan:** {full_response}▌")
+                    message_placeholder.markdown(f"{full_response}{typing_char}")
                 
-                message_placeholder.markdown(f"**Asistan:** {full_response}")
+                # Final yanıt
+                message_placeholder.markdown(full_response)
                 
                 # Tam yanıtı geçmişe ekleme
                 st.session_state.chat_history.append({"role": "model", "text": full_response})
 
             except APIError as e:
-                 st.error(f"API Hatası oluştu: {e}")
+                error_msg = f"🚨 API Hatası: {str(e)}"
+                message_placeholder.error(error_msg)
+                st.session_state.chat_history.append({"role": "model", "text": f"*{error_msg}*"})
             except Exception as e:
-                # Tekrar çalışmasını sağlamak için hata mesajını biraz daha bilgilendirici yapalım
-                st.error(f"Beklenmedik bir hata oluştu: {type(e).__name__}: {e}")
+                error_msg = f"⚠️ Beklenmedik bir hata oluştu: {type(e).__name__} - {str(e)}"
+                message_placeholder.error(error_msg)
+                st.session_state.chat_history.append({"role": "model", "text": f"*{error_msg}*"})
 
 # --- 2. PDF Analizi Sekmesi ---
 with tab_pdf:
@@ -222,6 +257,5 @@ with tab_img_analysis:
 # --- Alt Bilgi ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("Geliştirici: Seyid Yıldız")
-
 
 
