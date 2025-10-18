@@ -71,7 +71,7 @@ tab_chat, tab_pdf, tab_img_analysis = st.tabs([
 
 # --- 1. Sohbet Asistanı Sekmesi ---
 with tab_chat:
-    st.subheader("Sohbet Asistanı (Geçmişi Hatırlar)")
+    st.subheader("Sohbet Asistanı")
 
     # Sohbet geçmişini Streamlit session state'de saklama
     if "chat_history" not in st.session_state:
@@ -222,5 +222,6 @@ with tab_img_analysis:
 # --- Alt Bilgi ---
 st.sidebar.markdown("---")
 st.sidebar.markdown("Geliştirici: Seyid Yıldız")
+
 
 
